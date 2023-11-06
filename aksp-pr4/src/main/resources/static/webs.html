@@ -1,0 +1,64 @@
+<html lang="ru">
+<head>
+    <title>Chat WebSocket</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.2/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+
+<script>
+    var stompClient = null;
+
+    function setConnected(connected) {
+        document.getElementById('conversationDiv').style.visibility = connected ? 'visible' : 'hidden';
+        document.getElementById('response').innerHTML = '';
+    }
+
+    function connect() {
+        var socket = new SockJS('/webs');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, function(frame) {
+            setConnected(true);
+            console.log('Connected: ' + frame);
+            stompClient.subscribe('/topic/webs-topic', function(messageOutput) {
+                showMessageOutput(JSON.parse(messageOutput.body));
+            });
+        });
+    }
+
+    function disconnect() {
+        if(stompClient != null) {
+            stompClient.disconnect();
+        }
+        setConnected(false);
+        console.log("Disconnected");
+    }
+
+    function sendMessage() {
+        let text = document.getElementById('text').value;
+        stompClient.send("/app/webs", {},
+            JSON.stringify({'from':"", 'text':text}));
+    }
+
+    function showMessageOutput(messageOutput) {
+        let response = document.getElementById('response');
+        let p = document.createElement('p');
+        p.style.wordWrap = 'break-word';
+        p.appendChild(document.createTextNode(
+            messageOutput.from + ": "
+            + messageOutput.text + " ("
+            + messageOutput.time + ")")
+        );
+        response.appendChild(p);
+    }
+</script>
+
+<body onload="disconnect(); connect();">
+<div>
+    <div id="conversationDiv">
+        <label for="text"></label><input type="text" id="text" placeholder="Message"/>
+        <button id="sendMessage" onclick="sendMessage()">Send</button>
+        <p id="response"></p>
+    </div>
+</div>
+</body>
+</html>
